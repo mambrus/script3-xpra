@@ -17,8 +17,8 @@ Options. Defautls within []:
   -d              xpra DISPLAY. Defaults to the highest number in use +1.
   -D              Physical X-display. Defaults to \$DISPLAY [$DISPLAY]. I.e.
                   you can preset this by altering the \$DISPLAY environment
-				  variable before calling this script if all operations should
-				  default so something else.
+                  variable before calling this script if all operations should
+                  default so something else.
 
 Example:
   $RUN_SH_INFO firefox
@@ -49,6 +49,12 @@ EOF
 		esac
 	done
 	shift $(($OPTIND - 1))
+
+	if [ $# -eq 0 ]; then
+		echo "Syntax error: $RUN_SH_INFO expects a X-program to run" 1>&2
+		print_run_help $0 1>&2
+		exit 2
+	fi
 
 	START_HIDDEN=${START_HIDDEN-"no"}
 	DISPLAY=${DISPLAY-":0"}

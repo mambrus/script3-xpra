@@ -7,32 +7,72 @@ if [ -z $RUN_SH ]; then
 
 RUN_SH="run.sh"
 SCREEN_SESSION_NAME="xpra-${USER}"
+XPRA_MIN=20
+XPRA_MAX=1000
+
+# Note: The following can be 500 on older UNIX systems. Might need tweaking until
+# autodetecting is complete. TBD
+UID_START=1000
 
 function run() {
 	source .xpra..func.sh
 	start_screen
 
-	XPRA_SESSIONS=$(
-		xpra list | \
-			egrep ':[[:digit:]]+$' | \
-			sed -e 's/.*[[:space:]]//'
+	XPRA_SESSIONS=$(xpra_list_sessions)
+
+	#First session ID to use if none found, start from current uid
+	if [ "X${XPRA_SESSIONS}" == "X" ]; then
+		(( XPRA_SESSIONS = $(uid) - $UID_START ))
+		XPRA_SESSIONS=$(echo "$XPRA_SESSIONS * $XPRA_MAX" | bc)
+		(( XPRA_SESSIONS += $XPRA_MIN ))
+		(( XPRA_SESSIONS-- ))
+	fi
+
+	USE_XPRA_DISPLAY=$(
+		echo ${XPRA_SESSIONS} | \
+		sed -e 's/[[:space:]]/\n/g' | \
+		sed -e 's/.*://' | \
+		sort -n | \
+		tail -n1
 	)
-	USE_XPRA_DISPLAY=$(echo ${XPRA_SESSIONS} | sed -e 's/.*://' | sort)
+
+	(( USE_XPRA_DISPLAY++ ))
+	USE_XPRA_DISPLAY=":${USE_XPRA_DISPLAY}"
 
 	XPRA_DISPLAY=${XPRA_DISPLAY-"${USE_XPRA_DISPLAY}"}
-	[[ XPRA_DISPLAY++ ]]
+
+	# Deduct an application ID for the applicatin. Useful if several instances
+	# of the same application is  used and you need an easy way to distinguish
+	# between them. Number for the last application will always be the last
+	# number used + 1.
+	local AID=$(
+	local LS=$(xpra_list_sessions)
+	for S in $LS; do
+		xpra_info_session $S session_name
+	done | \
+		grep "${1}" | \
+		awk -F";" '{print $4}' | \
+		sed -e 's/:.*$//' | \
+		sort -n | tail -n1
+	)
+	(( AID++ ))
+
+
+	SESSION_NAME="$AID:${@}"
 
 	xpra start \
+		${XPRA_DISPLAY} \
 		--exit-with-children \
 		--start-child="$@" \
-		--session-name="$@" \
-		${XPRA_DISPLAY} \
+		--session-name="${SESSION_NAME}" \
 
-	if [ "X${START_HIDDEN}" != "Xyes"]; then
+	sleep 1
+	if [ "X${START_HIDDEN}" != "Xyes" ]; then
 		screen \
 			-S ${SCREEN_SESSION_NAME} \
 			-p0 \
-			-X stuff "xpra attach ${XPRA_DISPLAY} &"`echo -ne '\015'`
+			-X stuff "xpra attach ${XPRA_DISPLAY} \
+			--title=\"@title@ (${SESSION_NAME}) on @client-machine@\" &"`echo -ne '\015'`
 	fi
 }
 
