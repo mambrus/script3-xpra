@@ -14,18 +14,22 @@ visible on the current SCREEN.
 
 Options. Defautls within []:
   -H              Start hidden. This is the default xpra behaviour.
-  -d              xpra DISPLAY. Defaults to the highest number in use +1.
-  -D              Physical X-display. Defaults to \$DISPLAY [$DISPLAY]. I.e.
+  -d <display>    xpra DISPLAY. Defaults to the highest number in use +1.
+  -D <display>    Physical X-display. Defaults to \$DISPLAY [$DISPLAY]. I.e.
                   you can preset this by altering the \$DISPLAY environment
                   variable before calling this script if all operations should
                   default so something else.
+  -R <remote>     Run application on remote host and (normally) attach to this.
 
 Example:
   $RUN_SH_INFO firefox
 
 EOF
 }
-	while getopts hHD: OPTION; do
+
+	ORIG_ARGS="$@"
+
+	while getopts hHD:R: OPTION; do
 		case $OPTION in
 		h)
 			print_run_help $0
@@ -39,6 +43,12 @@ EOF
 			;;
 		D)
 			DISPLAY=$OPTARG
+			;;
+		R)
+			RHOST=$OPTARG
+			REMOTE_ARGS=${ORIG_ARGS/-R/}
+			REMOTE_ARGS=${REMOTE_ARGS/$RHOST/}
+			REMOTE_ARGS="-H ${REMOTE_ARGS}"
 			;;
 		?)
 			echo "Syntax error:" 1>&2
@@ -58,4 +68,8 @@ EOF
 
 	START_HIDDEN=${START_HIDDEN-"no"}
 	DISPLAY=${DISPLAY-":0"}
+	RHOST=${RHOST-""}
+	
+	#echo "${REMOTE_ARGS}"
+	#exit 0
 
