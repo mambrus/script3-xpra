@@ -43,10 +43,10 @@ function run() {
 
 		XPRA_DISPLAY=${XPRA_DISPLAY-"${USE_XPRA_DISPLAY}"}
 
-		# Deduct an application ID for the applicatin. Useful if several instances
-		# of the same application is  used and you need an easy way to distinguish
-		# between them. Number for the last application will always be the last
-		# number used + 1.
+		# Deduct an application ID for the applicatin. Useful if several
+		# instances of the same application is  used and you need an easy way
+		# to distinguish between them. Number for the last application will
+		# always be the last number used + 1.
 		local AID=$(
 		local LS=$(xpra_list_sessions)
 		for S in $LS; do
@@ -89,14 +89,12 @@ function run() {
 			screen \
 				-S ${SCREEN_SESSION_NAME} \
 				-p0 \
-				-X stuff "xpra attach ${XPRA_DISPLAY} \
-				--title=\"@title@ (${SESSION_NAME}) on @client-machine@\" &"`echo -ne '\015'`
+				-X stuff "xpra attach ${XPRA_DISPLAY} --title=\"@title@ (${SESSION_NAME}) on @client-machine@\" &"`echo -ne '\015'`
 		else
 			screen \
 				-S ${SCREEN_SESSION_NAME} \
 				-p0 \
-				-X stuff "xpra attach ssh:${RHOST}:${XPRA_DISPLAY} \
-				--title=\"@title@ (${SESSION_NAME}) on @client-machine@\" &"`echo -ne '\015'`
+				-X stuff "xpra attach ssh:${RHOST}:${XPRA_DISPLAY} --title=\"@title@ (${SESSION_NAME}) on @client-machine@\" &"`echo -ne '\015'`
 			echo "Session should turn up on your display shortly."
 		fi
 	fi
