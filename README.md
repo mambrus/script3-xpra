@@ -1,3 +1,6 @@
+xpra
+=======
+
 This package exists to overcome some of xpra's shortcomings.
 
 xpra is a fine tool, but it has two serious flaws:
@@ -38,3 +41,17 @@ The latter has the disadvantage of that CR is not ecchoed, hence if you bring ut
 #3 There's really nothing rocket-sciency about it. It's just having a script logging in to a remote host using ssh, then pick up a session from the "teleporter". Basically the same as you would do manually, but with the difference in that you don't have to physically move which saves you one run exra and which is especially useful if the remote host isn't withing arm-lengths distance.
 
 
+
+SCRIPT3 note:
+-------------
+This project is a script sub-library and is part of a larger project managed
+as a Google-repo called "SCRIPT3" (or "s3" for short). S3 can be found
+here: https://github.com/mambrus/script3
+
+To download and install any of s3's sub-projects, use the Google's "repo" tool
+and the manifest file in the main project above. Much better documentation
+there too. 
+
+Note that most of s3's sub-project files won't operate without s3 easily (or
+at all).
+  
