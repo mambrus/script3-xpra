@@ -7,6 +7,7 @@ if [ -z $RUN_SH ]; then
 
 RUN_SH="run.sh"
 SCREEN_SESSION_NAME="xpra-${USER}"
+XPRA_ROOT_START=19
 XPRA_MIN=20
 XPRA_MAX=1000
 
@@ -39,6 +40,7 @@ function test_installed () {
 function check_prereq() {
 	test_installed screen      ${RHOST} && \
 	test_installed xpra        ${RHOST} && \
+	test_installed bc          ${RHOST} && \
 	test_installed xpra.run.sh ${RHOST} && return 0
 
 	echo "Please install it, then try again." 1>&2
@@ -54,14 +56,21 @@ function run() {
 	if [ "X${RHOST}" == "X" ]; then
 		echo "Staring a local xpra on host [$(hostname)]..." 1>&2
 
-		XPRA_SESSIONS=$(xpra_list_sessions)
+		local LS=$(xpra_list_sessions)
+		local XPRA_SESSIONS=$(for S in $(echo $LS | sed -e 's/://g');do 
+			echo $S; 
+		done | sort -n | tail -n1)
 
 		#First session ID to use if none found, start from current uid
 		if [ "X${XPRA_SESSIONS}" == "X" ]; then
-			(( XPRA_SESSIONS = $(uid) - $UID_START ))
-			XPRA_SESSIONS=$(echo "$XPRA_SESSIONS * $XPRA_MAX" | bc)
-			(( XPRA_SESSIONS += $XPRA_MIN ))
-			(( XPRA_SESSIONS-- ))
+			if [ "$(uid)" == "0" ]; then
+				XPRA_SESSIONS=$XPRA_ROOT_START
+			else
+				(( XPRA_SESSIONS = (( $(uid) + 1 )) - $UID_START ))
+				XPRA_SESSIONS=$(echo "$XPRA_SESSIONS * $XPRA_MAX" | bc)
+				(( XPRA_SESSIONS += $XPRA_MIN ))
+				(( XPRA_SESSIONS-- ))
+			fi
 		fi
 
 		USE_XPRA_DISPLAY=$(
@@ -78,30 +87,31 @@ function run() {
 		XPRA_DISPLAY=${XPRA_DISPLAY-"${USE_XPRA_DISPLAY}"}
 
 		# Deduct an application ID for the application. Useful if several
-		# instances of the same application is  used and you need an easy way
+		# instances of the same application is used and you need an easy way
 		# to distinguish between them. Number for the last application will
 		# always be the last number used + 1.
-		local AID=$(
-			local LS=$(xpra_list_sessions)
-			for S in $LS; do
-				xpra_info_session $S session_name
-			done | \
-				grep "${1}" | \
-				awk -F";" '{print $4}' | \
-				sed -e 's/:.*$//' | \
-				sort -n | tail -n1
-		)
+		local LS=$(xpra_list_sessions)
+		local N_SIMILAR=$(for S in $LS; do
+			xpra info  $S | grep "${1}"
+		done | wc -l)
+		local AID=N_SIMILAR;
 		(( AID++ ))
 
+		local MAX_ALL=$(for S in $(echo $LS | sed -e 's/://g');do 
+			echo $S; 
+		done | sort -n | tail -n1)
 
-		SESSION_NAME="$AID:${@}"
+		CMD_N_ARRGS=$(echo "${@}" | tr '[:space:]' '_')
+		CMD_N_ARRGS=${CMD_N_ARRGS##'_'}
+		CMD_N_ARRGS=${CMD_N_ARRGS%%'_'}
+		SESSION_NAME="$AID:$CMD_N_ARRGS"
 
-		echo "xpra start \
-			${XPRA_DISPLAY} \
-			--exit-with-children \
-			--start-child=\"$@\" \
-			--session-name=\"${SESSION_NAME}\"" 1>&2
-		
+		echo "xpra start" \
+			"${XPRA_DISPLAY}" \
+			"--exit-with-children" \
+			"--start-child=\"$@\"" \
+			"--session-name=\"${SESSION_NAME}\"" 1>&2
+
 		xpra start \
 			${XPRA_DISPLAY} \
 			--exit-with-children \
@@ -118,6 +128,7 @@ function run() {
 			echo $RHOST >> ${S3XPRA_DIR}/remotes
 		fi
 		echo "Starting [xpra.run.sh ${REMOTE_ARGS}] @ [$RHOST]..." 1>&2
+		echo "ssh $RHOST -- \"export PATH=\$PATH:~/bin/; xpra.run.sh ${REMOTE_ARGS}\"" 1>&2
 
 		XPRA_DISPLAY=$(
 			(ssh $RHOST -- "export PATH=\$PATH:~/bin/; xpra.run.sh ${REMOTE_ARGS}" 2>&1) | \
