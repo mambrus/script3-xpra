@@ -82,25 +82,31 @@ function run() {
 		# to distinguish between them. Number for the last application will
 		# always be the last number used + 1.
 		local AID=$(
-		local LS=$(xpra_list_sessions)
-		for S in $LS; do
-			xpra_info_session $S session_name
-		done | \
-			grep "${1}" | \
-			awk -F";" '{print $4}' | \
-			sed -e 's/:.*$//' | \
-			sort -n | tail -n1
+			local LS=$(xpra_list_sessions)
+			for S in $LS; do
+				xpra_info_session $S session_name
+			done | \
+				grep "${1}" | \
+				awk -F";" '{print $4}' | \
+				sed -e 's/:.*$//' | \
+				sort -n | tail -n1
 		)
 		(( AID++ ))
 
 
 		SESSION_NAME="$AID:${@}"
 
+		echo "xpra start \
+			${XPRA_DISPLAY} \
+			--exit-with-children \
+			--start-child=\"$@\" \
+			--session-name=\"${SESSION_NAME}\"" 1>&2
+		
 		xpra start \
 			${XPRA_DISPLAY} \
 			--exit-with-children \
 			--start-child="$@" \
-			--session-name="${SESSION_NAME}" \
+			--session-name="${SESSION_NAME}"
 
 		sleep 1
 	else
@@ -114,7 +120,7 @@ function run() {
 		echo "Starting [xpra.run.sh ${REMOTE_ARGS}] @ [$RHOST]..." 1>&2
 
 		XPRA_DISPLAY=$(
-			(ssh $RHOST -- "export PATH=$PATH:~/bin/; xpra.run.sh ${REMOTE_ARGS}" 2>&1) | \
+			(ssh $RHOST -- "export PATH=\$PATH:~/bin/; xpra.run.sh ${REMOTE_ARGS}" 2>&1) | \
 				egrep "\.log$" | sed -e 's/\.log$//' | sed -e 's/.*-//'
 		)
 		echo "Started on remote host at diplay [$XPRA_DISPLAY]." 1>&2
